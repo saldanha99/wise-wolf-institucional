@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Question, LeadData, QuizPhase, QuizLevel } from '../types';
-import { Check, ChevronRight, Lock, Clock, Send, ShieldCheck } from 'lucide-react';
+import { Check, ChevronRight, Lock, Clock, Send, ShieldCheck, Loader2 } from 'lucide-react';
 import { EmbeddedLeadForm } from './ui/EmbeddedLeadForm';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase Client
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const tenantId = import.meta.env.VITE_TENANT_ID || 'wise-wolf-school';
+const supabase = (supabaseUrl && supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 // Questions stay in English as it is an English test
 const QUESTIONS: Question[] = [
@@ -69,6 +78,7 @@ const LevelQuiz: React.FC = () => {
   const [score, setScore] = useState(0);
   const [lead, setLead] = useState<LeadData>({ name: '', email: '', phone: '' });
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleStart = () => setPhase('question');
 
@@ -89,10 +99,34 @@ const LevelQuiz: React.FC = () => {
     }, 400);
   };
 
-  const handleLeadSubmit = (e: React.FormEvent) => {
+  const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate API call
-    console.log("Lead captured:", lead, "Score:", score);
+    setIsSubmitting(true);
+
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('crm_leads')
+          .insert([{
+            tenant_id: tenantId,
+            name: lead.name,
+            email: lead.email,
+            phone: lead.phone,
+            goal: 'Placement Test Result',
+            source: 'level_quiz',
+            status: 'NEW',
+            notes: `Placement score: ${score}/${QUESTIONS.length}`
+          }]);
+
+        if (error) throw error;
+      } catch (err) {
+        console.error("Error saving quiz lead:", err);
+      }
+    } else {
+      console.log("Supabase missing. Simulating lead capture:", lead, "Score:", score);
+    }
+
+    setIsSubmitting(false);
     setPhase('result');
   };
 
@@ -217,21 +251,37 @@ const LevelQuiz: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">E-mail Corporativo</label>
+                  <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Seu melhor e-mail</label>
                   <input
                     required
                     type="email"
                     className="w-full bg-slate-900/80 border border-slate-600 rounded-lg p-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red transition-all"
-                    placeholder="voce@empresa.com"
+                    placeholder="seu@email.com"
                     value={lead.email}
                     onChange={e => setLead({ ...lead, email: e.target.value })}
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">WhatsApp (com DDD)</label>
+                  <input
+                    required
+                    type="tel"
+                    className="w-full bg-slate-900/80 border border-slate-600 rounded-lg p-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red transition-all"
+                    placeholder="(11) 99999-9999"
+                    value={lead.phone}
+                    onChange={e => setLead({ ...lead, phone: e.target.value })}
+                  />
+                </div>
                 <button
                   type="submit"
-                  className="w-full py-4 bg-brand-red hover:bg-brand-redHover text-white font-bold text-lg rounded shadow-lg mt-6 flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-brand-red hover:bg-brand-redHover text-white font-bold text-lg rounded shadow-lg mt-6 flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  REVELAR MEUS RESULTADOS <Send size={18} />
+                  {isSubmitting ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <>REVELAR MEUS RESULTADOS <Send size={18} /></>
+                  )}
                 </button>
               </form>
               <div className="flex items-center justify-center gap-2 mt-6 text-slate-500 text-xs">

@@ -144,12 +144,12 @@ const LeadForm: React.FC = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Email Corporativo</label>
+                                    <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Seu melhor e-mail</label>
                                     <input
                                         required
                                         type="email"
                                         className="glass-input w-full rounded-lg p-3 text-white outline-none"
-                                        placeholder="joao@empresa.com"
+                                        placeholder="seu@email.com"
                                         value={formData.email}
                                         onChange={e => setFormData({ ...formData, email: e.target.value })}
                                     />
